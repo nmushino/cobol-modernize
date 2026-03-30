@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PROJECT=connectivity-link2
+PROJECT=connectivity-link
 ISTIO_NAMESPACE=istio-system
 DEMO_NS=demo
 SLEEP_INTERVAL=10
@@ -65,7 +65,7 @@ apiVersion: kuadrant.io/v1beta1
 kind: Kuadrant
 metadata:
   name: kuadrant
-  namespace: connectivity-link2
+  namespace: ${PROJECT}
 spec:
   devportal:
     enabled: true
@@ -103,7 +103,7 @@ spec:
   from:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    namespace: connectivity-link2
+    namespace: ${PROJECT}
   to:
   - group: ""
     kind: Service
@@ -242,7 +242,7 @@ EOF
 
 # echo "===== API Publish ====="
 # oc patch apiproduct demo-api-product \
-#   -n connectivity-link2 \
+#   -n connectivity-link \
 #   --type merge \
 #   -p '{"spec":{"publishStatus":"Published"}}'
 
