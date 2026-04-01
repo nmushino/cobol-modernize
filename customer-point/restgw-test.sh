@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PROJECT=connectivity-link2
+PROJECT=connectivity-link
 DEMO_NS=demo
 
 # IngressGateway Service の EXTERNAL-IP / LoadBalancer Host 取得

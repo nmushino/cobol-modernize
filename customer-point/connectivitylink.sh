@@ -174,8 +174,11 @@ kind: Secret
 metadata:
   name: demo-apikey
   namespace: ${PROJECT}
+  labels:
+    kuadrant.io/apikey: demo-apikey
 stringData:
-  apiKey: my-secret-key
+  api_key: my-secret-key
+type: Opaque
 ---
 # Developer Portal のために利用するので一旦無効化
 # apiVersion: devportal.kuadrant.io/v1alpha1
@@ -221,14 +224,19 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: customerpoint-route
-    namespace: ${PROJECT}
-  rules:
-    authentication:
-      apikey-demo:
-        apiKey:
-          selector:
-            name: demo-apikey
-            key: apiKey
+  defaults:
+    strategy: merge
+    rules:
+      authentication:
+        api-key-authn:
+          apiKey:
+            allNamespaces: true
+            selector:
+              matchLabels:
+                kuadrant.io/apikey: demo-apikey
+          credentials:
+            authorizationHeader:
+              prefix: Bearer
     response:
       success:
         filters:
@@ -273,7 +281,7 @@ for addon in kiali grafana prometheus; do
   fi
 done
 
-GATEWAY_HOST=$(oc get svc connectivity-link-gateway-istio -n ${PROJECT} -o jsonpath='{.spec.host}')
+GATEWAY_HOST=$(oc get svc connectivity-link-gateway-istio -n ${PROJECT} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 KIALI_URL=$(oc get route kiali -n ${ISTIO_NAMESPACE} -o jsonpath='{.spec.host}')
 GRAFANA_URL=$(oc get route grafana -n ${ISTIO_NAMESPACE} -o jsonpath='{.spec.host}')
 PROM_URL=$(oc get route prometheus -n ${ISTIO_NAMESPACE} -o jsonpath='{.spec.host}')
