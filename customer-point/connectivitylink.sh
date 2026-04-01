@@ -112,7 +112,6 @@ EOF
 echo "===== Create demo namespace ====="
 oc new-project ${DEMO_NS} 2>/dev/null || true
 
-echo "===== Deploy  Service ====="
 cat <<EOF | oc apply -n ${DEMO_NS} -f -
 apiVersion: apps/v1
 kind: Deployment
