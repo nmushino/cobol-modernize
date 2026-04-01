@@ -76,11 +76,45 @@ oc start-build ${APP_NAME} --from-dir=${DOCKER_CONTEXT_DIR} --follow
 # Deployment
 # ----------------------------
 echo "===== Deploy Application ====="
+
+# Build 完了後のイメージ名を取得
+IMAGE_NAME=$(oc get istag ${APP_NAME}:latest -o jsonpath='{.image.dockerImageReference}')
+
+# 既存 Deployment がある場合は削除（selector 修正のため）
 if oc get deployment ${APP_NAME} >/dev/null 2>&1; then
-    echo "Deployment already exists"
-else
-    oc new-app ${APP_NAME}
+    echo "Deployment already exists, deleting to update labels"
+    oc delete deployment ${APP_NAME}
 fi
+
+# Deployment YAML を一時作成して適用
+DEPLOY_YAML=$(mktemp)
+
+cat <<EOF > ${DEPLOY_YAML}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${APP_NAME}
+      deployment: ${APP_NAME}
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}
+        deployment: ${APP_NAME}
+    spec:
+      containers:
+      - name: ${APP_NAME}
+        image: ${IMAGE_NAME}
+        ports:
+        - containerPort: 8080
+EOF
+
+oc apply -f ${DEPLOY_YAML}
+rm -f ${DEPLOY_YAML}
 
 # ----------------------------
 # Pod 状態確認 & ログ取得
@@ -100,10 +134,14 @@ fi
 # ----------------------------
 # サービスとRouteの作成
 # ----------------------------
-oc expose deployment ${APP_NAME} \
-    --port=8080 \
-    --target-port=8080 \
-    -n ${PROJECT}
+# Service selector と Pod ラベルを合わせる
+if oc get svc ${APP_NAME} >/dev/null 2>&1; then
+    echo "Service already exists, updating selector"
+    oc patch svc ${APP_NAME} -p '{"spec":{"selector":{"app":"'"${APP_NAME}"'","deployment":"'"${APP_NAME}"'"}}}'
+else
+    oc expose deployment ${APP_NAME} --port=8080 --target-port=8080 -n ${PROJECT}
+fi
+
 oc expose svc/${APP_NAME} -n ${PROJECT}
 
 # ----------------------------
